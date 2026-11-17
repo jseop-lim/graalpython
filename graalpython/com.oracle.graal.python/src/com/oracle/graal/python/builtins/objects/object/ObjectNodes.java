@@ -132,11 +132,14 @@ import com.oracle.graal.python.nodes.PGuards;
 import com.oracle.graal.python.nodes.PNodeWithContext;
 import com.oracle.graal.python.nodes.PRaiseNode;
 import com.oracle.graal.python.nodes.SpecialAttributeNames;
+import com.oracle.graal.python.nodes.SpecialMethodNames;
 import com.oracle.graal.python.nodes.StringLiterals;
 import com.oracle.graal.python.nodes.attributes.LookupAttributeInMRONode;
 import com.oracle.graal.python.nodes.attributes.ReadAttributeFromObjectNode;
 import com.oracle.graal.python.nodes.attributes.WriteAttributeToObjectNode;
 import com.oracle.graal.python.nodes.call.CallNode;
+import com.oracle.graal.python.nodes.call.special.CallUnaryMethodNode;
+import com.oracle.graal.python.nodes.call.special.LookupSpecialMethodNode;
 import com.oracle.graal.python.nodes.classes.IsSubtypeNode;
 import com.oracle.graal.python.nodes.object.BuiltinClassProfiles.IsAnyBuiltinObjectProfile;
 import com.oracle.graal.python.nodes.object.GetClassNode;
@@ -431,7 +434,7 @@ public abstract class ObjectNodes {
         }
     }
 
-    @ImportStatic({PythonOptions.class, PGuards.class})
+    @ImportStatic({PythonOptions.class, PGuards.class, SpecialMethodNames.class})
     @GenerateInline(false)       // footprint reduction 64 -> 45
     abstract static class GetNewArgsNode extends Node {
         public abstract Pair<Object, Object> execute(VirtualFrame frame, Object obj);
@@ -440,27 +443,31 @@ public abstract class ObjectNodes {
         static Pair<Object, Object> dispatch(VirtualFrame frame, Object obj,
                         @Bind Node inliningTarget,
                         @Cached GetNewArgsInternalNode getNewArgsInternalNode,
-                        @Cached PyObjectLookupAttr lookupAttr) {
-            Object getNewArgsExAttr = lookupAttr.execute(frame, inliningTarget, obj, T___GETNEWARGS_EX__);
-            Object getNewArgsAttr = lookupAttr.execute(frame, inliningTarget, obj, T___GETNEWARGS__);
-            return getNewArgsInternalNode.execute(frame, getNewArgsExAttr, getNewArgsAttr);
+                        @Cached GetClassNode getClassNode,
+                        @Cached("create(T___GETNEWARGS_EX__)") LookupSpecialMethodNode lookupNewArgsEx,
+                        @Cached("create(T___GETNEWARGS__)") LookupSpecialMethodNode lookupNewArgs,
+                        @Cached InlinedConditionProfile hasNewArgsEx) {
+            Object type = getClassNode.execute(inliningTarget, obj);
+            Object getNewArgsExAttr = lookupNewArgsEx.execute(frame, type, obj);
+            Object getNewArgsAttr = hasNewArgsEx.profile(inliningTarget, getNewArgsExAttr != PNone.NO_VALUE) ? PNone.NO_VALUE : lookupNewArgs.execute(frame, type, obj);
+            return getNewArgsInternalNode.execute(frame, obj, getNewArgsExAttr, getNewArgsAttr);
         }
 
         @ImportStatic(PGuards.class)
         @GenerateInline(false) // 32 -> 13
         abstract static class GetNewArgsInternalNode extends Node {
-            public abstract Pair<Object, Object> execute(VirtualFrame frame, Object getNewArgsExAttr, Object getNewArgsAttr);
+            public abstract Pair<Object, Object> execute(VirtualFrame frame, Object obj, Object getNewArgsExAttr, Object getNewArgsAttr);
 
             @Specialization(guards = "!isNoValue(getNewArgsExAttr)")
-            static Pair<Object, Object> doNewArgsEx(VirtualFrame frame, Object getNewArgsExAttr, @SuppressWarnings("unused") Object getNewArgsAttr,
+            static Pair<Object, Object> doNewArgsEx(VirtualFrame frame, Object obj, Object getNewArgsExAttr, @SuppressWarnings("unused") Object getNewArgsAttr,
                             @Bind Node inliningTarget,
-                            @Exclusive @Cached CallNode callNode,
+                            @Exclusive @Cached CallUnaryMethodNode callNode,
                             @Cached PyDictCheckNode isDictSubClassNode,
                             @Cached PyObjectGetItem getItemNode,
                             @Cached PyObjectSizeNode sizeNode,
                             @Exclusive @Cached PyTupleCheckNode tupleCheckNode,
                             @Exclusive @Cached PRaiseNode raiseNode) {
-                Object newargs = callNode.execute(frame, getNewArgsExAttr);
+                Object newargs = callNode.executeObject(frame, getNewArgsExAttr, obj);
                 if (!tupleCheckNode.execute(inliningTarget, newargs)) {
                     throw raiseNode.raise(inliningTarget, TypeError, SHOULD_RETURN_TYPE_A_NOT_TYPE_B, T___GETNEWARGS_EX__, "tuple", newargs);
                 }
@@ -483,12 +490,12 @@ public abstract class ObjectNodes {
             }
 
             @Specialization(guards = "!isNoValue(getNewArgsAttr)")
-            static Pair<Object, Object> doNewArgs(VirtualFrame frame, @SuppressWarnings("unused") PNone getNewArgsExAttr, Object getNewArgsAttr,
+            static Pair<Object, Object> doNewArgs(VirtualFrame frame, Object obj, @SuppressWarnings("unused") PNone getNewArgsExAttr, Object getNewArgsAttr,
                             @Bind Node inliningTarget,
-                            @Exclusive @Cached CallNode callNode,
+                            @Exclusive @Cached CallUnaryMethodNode callNode,
                             @Exclusive @Cached PyTupleCheckNode tupleCheckNode,
                             @Exclusive @Cached PRaiseNode raiseNode) {
-                Object args = callNode.execute(frame, getNewArgsAttr);
+                Object args = callNode.executeObject(frame, getNewArgsAttr, obj);
                 if (!tupleCheckNode.execute(inliningTarget, args)) {
                     throw raiseNode.raise(inliningTarget, TypeError, SHOULD_RETURN_TYPE_A_NOT_TYPE_B, T___GETNEWARGS__, "tuple", args);
                 }
@@ -496,7 +503,7 @@ public abstract class ObjectNodes {
             }
 
             @Specialization
-            static Pair<Object, Object> doHasNeither(@SuppressWarnings("unused") PNone getNewArgsExAttr, @SuppressWarnings("unused") PNone getNewArgsAttr) {
+            static Pair<Object, Object> doHasNeither(@SuppressWarnings("unused") Object obj, @SuppressWarnings("unused") PNone getNewArgsExAttr, @SuppressWarnings("unused") PNone getNewArgsAttr) {
                 return Pair.create(PNone.NONE, PNone.NONE);
             }
         }

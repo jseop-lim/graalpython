@@ -297,6 +297,33 @@ def test_reduce_ex_with_none():
     assert_raises(TypeError, object(), None)
 
 
+def test_reduce_ex_looks_up_getnewargs_on_type():
+    import copy
+
+    class GetattrReturnsNone(dict):
+        def __getattr__(self, name):
+            return self.get(name)
+
+    obj = GetattrReturnsNone(ham=5)
+    assert obj.__reduce_ex__(4)[1] == (GetattrReturnsNone,)
+    assert copy.deepcopy(obj) == {'ham': 5}
+    assert type(copy.deepcopy(obj)) is GetattrReturnsNone
+
+    class InstanceAttribute:
+        def __getnewargs__(self):
+            return (1,)
+
+    obj = InstanceAttribute()
+    obj.__getnewargs_ex__ = lambda: ((2,), {})
+    assert obj.__reduce_ex__(4)[1] == (InstanceAttribute, 1)
+
+    class NewArgsEx:
+        def __getnewargs_ex__(self):
+            return (3,), {'a': 4}
+
+    assert NewArgsEx().__reduce_ex__(4)[1] == (NewArgsEx, (3,), {'a': 4})
+
+
 def test_descr_call_with_none():
     descr = object.__dict__['__class__']
     assert None.__class__ is type(None)
