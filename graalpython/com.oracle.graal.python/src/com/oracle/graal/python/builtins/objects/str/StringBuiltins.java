@@ -287,9 +287,11 @@ public final class StringBuiltins extends PythonBuiltins {
                         @Exclusive @Cached BytesCommonBuiltins.DecodeNode decodeNode,
                         @Shared @Cached TypeNodes.GetInstanceShape getInstanceShape,
                         @Exclusive @Cached PyUnicodeCheckNode stringCheckNode,
+                        @Exclusive @Cached CastToTruffleStringNode castToStringNode,
+                        @Exclusive @Cached TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode,
                         @Exclusive @Cached PRaiseNode raiseNode,
                         @Shared("releaseBuffer") @Cached PyBufferRelease releaseBuffer) {
-            checkEncodingAndErrors(inliningTarget, encoding, errors, stringCheckNode, raiseNode);
+            checkEncodingAndErrors(inliningTarget, encoding, errors, stringCheckNode, castToStringNode, byteIndexOfCodePointNode, raiseNode);
             Object buffer;
             try {
                 buffer = getBuffer.executeReadonly(frame, obj);
@@ -349,9 +351,11 @@ public final class StringBuiltins extends PythonBuiltins {
                         @Exclusive @Cached CExtNodes.StringSubtypeNew subtypeNew,
                         @Exclusive @Cached TypeNodes.GetInstanceShape getInstanceShape,
                         @Exclusive @Cached PyUnicodeCheckNode stringCheckNode,
+                        @Exclusive @Cached CastToTruffleStringNode castToStringNode,
+                        @Exclusive @Cached TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode,
                         @Exclusive @Cached PRaiseNode raiseNode,
                         @Shared @Cached PyBufferRelease releaseBuffer) {
-            checkEncodingAndErrors(inliningTarget, encoding, errors, stringCheckNode, raiseNode);
+            checkEncodingAndErrors(inliningTarget, encoding, errors, stringCheckNode, castToStringNode, byteIndexOfCodePointNode, raiseNode);
             Object buffer;
             try {
                 buffer = getBuffer.executeReadonly(frame, obj);
@@ -377,12 +381,23 @@ public final class StringBuiltins extends PythonBuiltins {
             return isSubtypeNode.execute(cls, PythonBuiltinClassType.PString);
         }
 
-        private static void checkEncodingAndErrors(Node inliningTarget, Object encoding, Object errors, PyUnicodeCheckNode stringCheckNode, PRaiseNode raiseNode) {
-            if (encoding != PNone.NO_VALUE && !stringCheckNode.execute(inliningTarget, encoding)) {
-                throw raiseNode.raise(inliningTarget, TypeError, ErrorMessages.STR_ARG_S_MUST_BE_STR_NOT_T, "encoding", encoding);
+        private static void checkEncodingAndErrors(Node inliningTarget, Object encoding, Object errors, PyUnicodeCheckNode stringCheckNode, CastToTruffleStringNode castToStringNode,
+                        TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode, PRaiseNode raiseNode) {
+            checkStringArgument(inliningTarget, encoding, "encoding", stringCheckNode, castToStringNode, byteIndexOfCodePointNode, raiseNode);
+            checkStringArgument(inliningTarget, errors, "errors", stringCheckNode, castToStringNode, byteIndexOfCodePointNode, raiseNode);
+        }
+
+        private static void checkStringArgument(Node inliningTarget, Object value, String name, PyUnicodeCheckNode stringCheckNode, CastToTruffleStringNode castToStringNode,
+                        TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode, PRaiseNode raiseNode) {
+            if (value == PNone.NO_VALUE) {
+                return;
             }
-            if (errors != PNone.NO_VALUE && !stringCheckNode.execute(inliningTarget, errors)) {
-                throw raiseNode.raise(inliningTarget, TypeError, ErrorMessages.STR_ARG_S_MUST_BE_STR_NOT_T, "errors", errors);
+            if (!stringCheckNode.execute(inliningTarget, value)) {
+                throw raiseNode.raise(inliningTarget, TypeError, ErrorMessages.STR_ARG_S_MUST_BE_STR_NOT_T, name, value);
+            }
+            TruffleString string = castToStringNode.execute(inliningTarget, value);
+            if (byteIndexOfCodePointNode.execute(string, 0, 0, string.byteLength(TS_ENCODING), TS_ENCODING) >= 0) {
+                throw raiseNode.raise(inliningTarget, ValueError, ErrorMessages.EMBEDDED_NULL_CHARACTER);
             }
         }
 

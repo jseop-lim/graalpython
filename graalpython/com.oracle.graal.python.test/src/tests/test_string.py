@@ -1242,3 +1242,9 @@ def test_fstring():
     assert f"hello {FunkyFormat('world')}!" == "hello world!"
     assert f"hello {FunkyStr('world')}!" == "hello world!"
     assertRaises(TypeError, lambda: f"hello {FunkyFormat(33)}!")
+
+
+def test_str_encoding_and_errors_reject_embedded_null():
+    assertRaises(ValueError, str, 'x', 'utf-8\x00')
+    assertRaises(ValueError, str, b'x', 'utf-8\x00')
+    assertRaises(ValueError, str, b'x', 'utf-8', 'strict\x00')

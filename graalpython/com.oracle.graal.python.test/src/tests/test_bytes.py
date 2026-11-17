@@ -99,6 +99,14 @@ def test_decode_empty_skips_codec_lookup():
     assert_raises(TypeError, str, 1, 'x')
 
 
+def test_encoding_and_errors_reject_embedded_null():
+    assert_raises(ValueError, bytes, [], 'utf-8\x00')
+    assert_raises(ValueError, bytes, 'x', 'utf-8\x00')
+    assert_raises(ValueError, bytes, 'x', 'utf-8', 'strict\x00')
+    assert_raises(ValueError, bytearray, [], 'utf-8\x00')
+    assert_raises(ValueError, bytearray, 'x', 'utf-8', 'strict\x00')
+
+
 def test_from_ssize():
     assert bytes(0) == b''
     assert bytes(1) == b'\x00'

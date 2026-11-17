@@ -496,15 +496,25 @@ public abstract class BytesNodes {
         }
 
         @Specialization
-        static Object str(TruffleString str) {
-            return str;
+        static Object str(TruffleString str,
+                        @Bind Node inliningTarget,
+                        @Shared @Cached TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode) {
+            return checkNoNull(inliningTarget, str, byteIndexOfCodePointNode);
         }
 
         @Specialization
         static Object str(PString str,
                         @Bind Node inliningTarget,
-                        @Cached StringNodes.StringMaterializeNode toStr) {
-            return toStr.execute(inliningTarget, str);
+                        @Cached StringNodes.StringMaterializeNode toStr,
+                        @Shared @Cached TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode) {
+            return checkNoNull(inliningTarget, toStr.execute(inliningTarget, str), byteIndexOfCodePointNode);
+        }
+
+        private static TruffleString checkNoNull(Node inliningTarget, TruffleString str, TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode) {
+            if (byteIndexOfCodePointNode.execute(str, 0, 0, str.byteLength(TS_ENCODING), TS_ENCODING) >= 0) {
+                throw PRaiseNode.raiseStatic(inliningTarget, ValueError, ErrorMessages.EMBEDDED_NULL_CHARACTER);
+            }
+            return str;
         }
 
         @Fallback
