@@ -128,6 +128,25 @@ def test_metaclass_methods():
     assert global_log[3] == ['MyKlass object', 1, 2]
 
 
+def test_mro_without_the_new_class():
+    class DropSelf(type):
+        def mro(cls):
+            return type.mro(cls)[1:]
+
+    raised = False
+    try:
+        DropSelf('X', (), {})
+    except TypeError:
+        raised = True
+    assert raised
+
+    class KeepSelf(type):
+        def mro(cls):
+            return type.mro(cls)
+
+    assert KeepSelf('X', (), {}).__mro__[1:] == (object,)
+
+
 class A:
     class B:
         pass

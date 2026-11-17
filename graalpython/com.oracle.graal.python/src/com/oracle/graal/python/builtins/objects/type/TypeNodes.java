@@ -1966,6 +1966,9 @@ public abstract class TypeNodes {
             }
 
             // Call __init_subclass__ on the parent of a newly generated type
+            if (!mroContains(getMroStorageNode.execute(inliningTarget, newType), newType)) {
+                throw raise.raise(inliningTarget, TypeError, ErrorMessages.SUPER_OBJ_MUST_BE_INST_SUB_OR_TYPE);
+            }
             SuperObject superObject = PFactory.createSuperObject(language);
             superObject.init(newType, newType, newType);
             callInitSubclassNode.execute(frame, getInitSubclassNode.execute(frame, superObject), PythonUtils.EMPTY_OBJECT_ARRAY, kwds);
@@ -1973,6 +1976,15 @@ public abstract class TypeNodes {
             newType.initializeMroShape(language);
 
             return newType;
+        }
+
+        private static boolean mroContains(MroSequenceStorage mro, Object cls) {
+            for (int i = 0; i < mro.length(); i++) {
+                if (mro.getPythonClassItemNormalized(i) == cls) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private Object getModuleNameFromGlobals(Node inliningTarget, PythonObject globals, HashingStorageGetItem getItem) {
