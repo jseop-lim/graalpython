@@ -118,6 +118,7 @@ import com.oracle.graal.python.PythonFileDetector;
 import com.oracle.graal.python.PythonLanguage;
 import com.oracle.graal.python.annotations.ArgumentClinic;
 import com.oracle.graal.python.annotations.Builtin;
+import com.oracle.graal.python.annotations.ClinicConverterFactory;
 import com.oracle.graal.python.builtins.CoreFunctions;
 import com.oracle.graal.python.builtins.Python3Core;
 import com.oracle.graal.python.builtins.PythonBuiltinClassType;
@@ -251,6 +252,7 @@ import com.oracle.graal.python.nodes.function.builtins.PythonTernaryBuiltinNode;
 import com.oracle.graal.python.nodes.function.builtins.PythonTernaryClinicBuiltinNode;
 import com.oracle.graal.python.nodes.function.builtins.PythonUnaryBuiltinNode;
 import com.oracle.graal.python.nodes.function.builtins.PythonVarargsBuiltinNode;
+import com.oracle.graal.python.nodes.function.builtins.clinic.ArgumentCastNode;
 import com.oracle.graal.python.nodes.function.builtins.clinic.ArgumentClinicProvider;
 import com.oracle.graal.python.nodes.object.BuiltinClassProfiles.IsBuiltinObjectProfile;
 import com.oracle.graal.python.nodes.object.GetClassNode;
@@ -924,11 +926,52 @@ public final class BuiltinFunctions extends PythonBuiltins {
         }
     }
 
+    public abstract static class CompileFilenameConversionNode extends ArgumentCastNode {
+        @Specialization
+        static Object convert(VirtualFrame frame, Object value,
+                        @Cached PyUnicodeFSDecoderNode decoderNode) {
+            return decoderNode.execute(frame, value);
+        }
+
+        @ClinicConverterFactory
+        @NeverDefault
+        public static CompileFilenameConversionNode create() {
+            return BuiltinFunctionsFactory.CompileFilenameConversionNodeGen.create();
+        }
+    }
+
+    public abstract static class CompileModeConversionNode extends ArgumentCastNode {
+        @Specialization
+        static Object convert(Object value,
+                        @Bind Node inliningTarget,
+                        @Cached CastToTruffleStringNode castToStringNode,
+                        @Cached TruffleString.ByteIndexOfCodePointNode byteIndexOfCodePointNode,
+                        @Cached PRaiseNode raiseNode) {
+            TruffleString mode;
+            try {
+                mode = castToStringNode.execute(inliningTarget, value);
+            } catch (CannotCastException e) {
+                throw raiseNode.raise(inliningTarget, TypeError, ErrorMessages.S_BRACKETS_ARG_MUST_BE_S_NOT_P, J_COMPILE, "str", value);
+            }
+            if (byteIndexOfCodePointNode.execute(mode, 0, 0, mode.byteLength(TS_ENCODING), TS_ENCODING) >= 0) {
+                throw raiseNode.raise(inliningTarget, ValueError, ErrorMessages.EMBEDDED_NULL_CHARACTER);
+            }
+            return mode;
+        }
+
+        @ClinicConverterFactory
+        @NeverDefault
+        public static CompileModeConversionNode create() {
+            return BuiltinFunctionsFactory.CompileModeConversionNodeGen.create();
+        }
+    }
+
     // compile(source, filename, mode, flags=0, dont_inherit=False, optimize=-1)
     @Builtin(name = J_COMPILE, minNumOfPositionalArgs = 3, parameterNames = {"source", "filename", "mode", "flags", "dont_inherit", "optimize"}, keywordOnlyNames = {"_feature_version"})
-    @ArgumentClinic(name = "mode", conversion = ArgumentClinic.ClinicConversion.TString)
+    @ArgumentClinic(name = "filename", conversionClass = CompileFilenameConversionNode.class)
+    @ArgumentClinic(name = "mode", conversionClass = CompileModeConversionNode.class)
     @ArgumentClinic(name = "flags", conversion = ArgumentClinic.ClinicConversion.Int, defaultValue = "0")
-    @ArgumentClinic(name = "dont_inherit", conversion = ArgumentClinic.ClinicConversion.IntToBoolean, defaultValue = "false")
+    @ArgumentClinic(name = "dont_inherit", conversion = ArgumentClinic.ClinicConversion.Boolean, defaultValue = "false")
     @ArgumentClinic(name = "optimize", conversion = ArgumentClinic.ClinicConversion.Int, defaultValue = "-1")
     @ArgumentClinic(name = "_feature_version", conversion = ArgumentClinic.ClinicConversion.Int, defaultValue = "-1")
     @GenerateNodeFactory
@@ -1067,22 +1110,19 @@ public final class BuiltinFunctions extends PythonBuiltins {
 
         @Specialization(limit = "3")
         @SuppressWarnings("truffle-static-method")
-        Object generic(VirtualFrame frame, Object wSource, Object wFilename, TruffleString mode, int flags, boolean dontInherit, int optimize, int featureVersion,
+        Object generic(VirtualFrame frame, Object wSource, TruffleString filename, TruffleString mode, int flags, boolean dontInherit, int optimize, int featureVersion,
                         @Cached PyObjectGetBuffer getBuffer,
                         @CachedLibrary(limit = "3") PythonBufferAccessLibrary bufferLib,
                         @Bind PythonContext context,
                         @Bind Node inliningTarget,
                         @Exclusive @Cached("createFor($node)") BoundaryCallData boundaryCallData,
                         @CachedLibrary("wSource") InteropLibrary interopLib,
-                        @Cached PyUnicodeFSDecoderNode asPath,
                         @Cached TruffleString.SwitchEncodingNode switchEncodingNode,
                         @Shared @Cached ReadFrameNode readCallerFrame,
                         @Cached PRaiseNode raiseNode) {
             if (wSource instanceof PCode) {
                 return wSource;
             }
-            TruffleString filename = asPath.execute(frame, wFilename);
-
             if (!dontInherit) {
                 flags = inheritFlags(frame, flags, readCallerFrame);
             }

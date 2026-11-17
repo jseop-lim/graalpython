@@ -194,6 +194,30 @@ def test_compile_checks_mode_before_source():
     assert_raises(ValueError, compile, ast.parse("1"), "<input>", "func_type")
 
 
+def test_compile_converts_filename_before_mode():
+    class RaisingPath:
+        def __fspath__(self):
+            raise KeyError("fspath")
+
+    assert_raises(KeyError, compile, "1", RaisingPath(), 0)
+    assert_raises(KeyError, compile, b"1", RaisingPath(), 0)
+    assert_raises(ValueError, compile, "1", "a\x00", "eval")
+
+
+def test_compile_mode_rejects_embedded_null():
+    assert_raises(ValueError, compile, "1", "<input>", "ex\x00ec", {})
+    assert_raises(ValueError, compile, "1", "<input>", "ex\x00ec", 0, False, 5)
+
+
+def test_compile_dont_inherit_uses_truth_value():
+    class RaisingBool:
+        def __bool__(self):
+            raise KeyError("bool")
+
+    assert isinstance(compile("1", "<input>", "eval", 0, []), types.CodeType)
+    assert_raises(KeyError, compile, "1", "<input>", "eval", 0, RaisingBool())
+
+
 def test_underscore_in_numbers():
     assert eval('1_0') == 10
     assert eval('0b1_1') == 0b11
