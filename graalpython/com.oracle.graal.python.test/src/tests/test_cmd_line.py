@@ -40,6 +40,7 @@
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 IS_GRAALPY = sys.implementation.name == "graalpy"
@@ -112,6 +113,16 @@ class CmdLineTest(unittest.TestCase):
         code = "import sys\nsys.exit(42)\n"
         result = subprocess.run([sys.executable], input=code, text=True)
         self.assertEqual(42, result.returncode)
+
+    def test_script_main_loader(self):
+        code = "print(type(__loader__).__name__, __loader__.name, __loader__.path == __file__, __loader__.get_source('__main__') == open(__file__).read())\n"
+        with tempfile.TemporaryDirectory() as tmpdir:
+            script = os.path.join(tmpdir, 'script.py')
+            with open(script, 'w') as f:
+                f.write(code)
+            result = subprocess.run([sys.executable, script], capture_output=True, text=True)
+        self.assertEqual(0, result.returncode, result)
+        self.assertEqual('SourceFileLoader __main__ True True', result.stdout.strip())
 
     @unittest.skipUnless(IS_GRAALPY, "GraalPy-specific test")
     def test_jit_mode_presets(self):

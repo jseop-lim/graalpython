@@ -57,6 +57,7 @@ import static com.oracle.graal.python.nodes.BuiltinNames.T_SIZE;
 import static com.oracle.graal.python.nodes.BuiltinNames.T__IMP;
 import static com.oracle.graal.python.nodes.BuiltinNames.T___GRAALPYTHON__;
 import static com.oracle.graal.python.nodes.BuiltinNames.T___MAIN__;
+import static com.oracle.graal.python.nodes.SpecialAttributeNames.T___LOADER__;
 import static com.oracle.graal.python.nodes.SpecialAttributeNames.T___NAME__;
 import static com.oracle.graal.python.nodes.SpecialMethodNames.T_INSERT;
 import static com.oracle.graal.python.nodes.StringLiterals.T_COLON;
@@ -141,6 +142,7 @@ import com.oracle.graal.python.builtins.objects.tuple.PTuple;
 import com.oracle.graal.python.lib.OsEnvironGetNode;
 import com.oracle.graal.python.lib.PyNumberLongNode;
 import com.oracle.graal.python.lib.PyObjectCallMethodObjArgs;
+import com.oracle.graal.python.lib.PyObjectGetAttr;
 import com.oracle.graal.python.lib.PyObjectGetItem;
 import com.oracle.graal.python.lib.PyObjectStrAsTruffleStringNode;
 import com.oracle.graal.python.lib.PyTupleCheckNode;
@@ -222,6 +224,8 @@ public final class GraalPythonModuleBuiltins extends PythonBuiltins {
     private static final TruffleString T_PATH_HOOKS = tsLiteral("path_hooks");
     private static final TruffleString T_PATH_IMPORTER_CACHE = tsLiteral("path_importer_cache");
     private static final TruffleString T__RUN_MODULE_AS_MAIN = tsLiteral("_run_module_as_main");
+    private static final TruffleString T__BOOTSTRAP_EXTERNAL = tsLiteral("_bootstrap_external");
+    private static final TruffleString T_SOURCE_FILE_LOADER = tsLiteral("SourceFileLoader");
     private static final TruffleString T_STDIO_ENCODING = tsLiteral("stdio_encoding");
     private static final TruffleString T_STDIO_ERROR = tsLiteral("stdio_error");
 
@@ -428,6 +432,10 @@ public final class GraalPythonModuleBuiltins extends PythonBuiltins {
             PArguments.setSpecialArgument(arguments, mainDict);
             PArguments.setException(arguments, PException.NO_EXCEPTION);
             context.initializeMainModule(inputFilePath);
+            if (!inputFilePath.isEmpty()) {
+                Object bootstrapExternal = PyObjectGetAttr.executeUncached(context.getImportlib(), T__BOOTSTRAP_EXTERNAL);
+                mainModule.setAttribute(T___LOADER__, PyObjectCallMethodObjArgs.executeUncached(bootstrapExternal, T_SOURCE_FILE_LOADER, T___MAIN__, inputFilePath));
+            }
             Object state = ExecutionContext.IndirectCalleeContext.enter(context.getThreadState(language), arguments);
             try {
                 callTarget.call(arguments);
