@@ -132,6 +132,7 @@ import com.oracle.graal.python.builtins.objects.bytes.BytesNodes;
 import com.oracle.graal.python.builtins.objects.bytes.PByteArray;
 import com.oracle.graal.python.builtins.objects.bytes.PBytes;
 import com.oracle.graal.python.builtins.objects.bytes.PBytesLike;
+import com.oracle.graal.python.builtins.objects.cell.PCell;
 import com.oracle.graal.python.builtins.objects.code.CodeNodes;
 import com.oracle.graal.python.builtins.objects.code.PCode;
 import com.oracle.graal.python.builtins.objects.common.DynamicObjectStorage;
@@ -202,6 +203,7 @@ import com.oracle.graal.python.lib.PyObjectIsTrueNode;
 import com.oracle.graal.python.lib.PyObjectLookupAttr;
 import com.oracle.graal.python.lib.PyObjectLookupAttrO;
 import com.oracle.graal.python.lib.PyObjectReprAsObjectNode;
+import com.oracle.graal.python.lib.PyObjectReprAsTruffleStringNode;
 import com.oracle.graal.python.lib.PyObjectRichCompareBool;
 import com.oracle.graal.python.lib.PyObjectSetAttrO;
 import com.oracle.graal.python.lib.PyObjectSetItem;
@@ -2261,6 +2263,7 @@ public final class BuiltinFunctions extends PythonBuiltins {
                         @Cached UpdateBasesNode update,
                         @Cached PyObjectSetItem setOrigBases,
                         @Cached GetClassNode getClass,
+                        @Cached IsTypeNode isTypeNode,
                         @Cached IsBuiltinObjectProfile noAttributeProfile,
                         @Cached PRaiseNode raiseNode,
                         @Cached LazyInteropLibrary lazyInteropLibrary) {
@@ -2352,7 +2355,7 @@ public final class BuiltinFunctions extends PythonBuiltins {
             Object[] bodyArguments = createArguments.execute(inliningTarget, bodyFunction, PythonUtils.EMPTY_OBJECT_ARRAY, PKeyword.EMPTY_KEYWORDS,
                             bodyFunction.getCode().getSignature(), null, null, bodyFunction.getDefaults(), bodyFunction.getKwDefaults(), false);
             PArguments.setSpecialArgument(bodyArguments, ns);
-            invokeBody.execute(frame, inliningTarget, bodyFunction, bodyArguments);
+            Object cell = invokeBody.execute(frame, inliningTarget, bodyFunction, bodyArguments);
             if (init.bases != basesArray) {
                 setOrigBases.execute(frame, inliningTarget, ns, SpecialAttributeNames.T___ORIG_BASES__, PFactory.createTuple(language, basesArray));
             }
@@ -2367,12 +2370,25 @@ public final class BuiltinFunctions extends PythonBuiltins {
             }
 
             Object cls = callType.execute(frame, init.meta, new Object[]{name, bases, ns}, init.mkw);
-
-            /*
-             * We could check here and throw "__class__ not set defining..." errors.
-             */
-
+            if (cell instanceof PCell classCell && classCell.getRef() != cls && isTypeNode.execute(inliningTarget, cls)) {
+                Object saved = BoundaryCallContext.enter(frame, boundaryCallData);
+                try {
+                    throw raiseClassCellNotSet(name, cls, classCell.getRef());
+                } finally {
+                    BoundaryCallContext.exit(frame, boundaryCallData, saved);
+                }
+            }
             return cls;
+        }
+
+        @TruffleBoundary
+        private PException raiseClassCellNotSet(TruffleString name, Object cls, Object cellValue) {
+            TruffleString nameRepr = PyObjectReprAsTruffleStringNode.executeUncached(name);
+            TruffleString clsRepr = PyObjectReprAsTruffleStringNode.executeUncached(cls);
+            if (cellValue == null) {
+                throw PRaiseNode.raiseStatic(this, RuntimeError, ErrorMessages.CLASS_NOT_SET_DEFINING_S_AS_S, nameRepr, clsRepr);
+            }
+            throw PRaiseNode.raiseStatic(this, PythonErrorType.TypeError, ErrorMessages.CLASS_SET_TO_S_DEFINING_S_AS_S, PyObjectReprAsTruffleStringNode.executeUncached(cellValue), nameRepr, clsRepr);
         }
 
         @InliningCutoff

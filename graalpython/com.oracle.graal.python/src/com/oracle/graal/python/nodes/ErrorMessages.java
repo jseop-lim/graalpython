@@ -896,6 +896,8 @@ public abstract class ErrorMessages {
     public static final TruffleString BUILD_CLS_NOT_ENOUGH_ARGS = tsLiteral("__build_class__: not enough arguments");
     public static final TruffleString BUILD_CLS_FUNC_MUST_BE_FUNC = tsLiteral("__build_class__: func must be a function");
     public static final TruffleString BUILD_CLS_NAME_NOT_STRING = tsLiteral("__build_class__: name is not a string");
+    public static final TruffleString CLASS_NOT_SET_DEFINING_S_AS_S = tsLiteral("__class__ not set defining %s as %s. Was __classcell__ propagated to type.__new__?");
+    public static final TruffleString CLASS_SET_TO_S_DEFINING_S_AS_S = tsLiteral("__class__ set to %s defining %s as %s");
     public static final TruffleString CAPI_NOT_YET_INITIALIZED = tsLiteral("C API not yet initialized");
     public static final TruffleString INCORRECT_USAGE_OF_INTERNAL_GROUPER = tsLiteral("incorrect usage of internal _grouper");
     public static final TruffleString COVERAGE_TRACKER_NOT_AVAILABLE = tsLiteral("coverage tracker not available");

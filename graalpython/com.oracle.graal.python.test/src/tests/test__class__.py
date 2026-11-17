@@ -1,4 +1,4 @@
-# Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # The Universal Permissive License (UPL), Version 1.0
@@ -72,6 +72,38 @@ class BasicTests(unittest.TestCase):
                 self.assertEqual(z, X, "__class__ has to contain the class object X")
         X().methodX()
 
+
+    def test_classcell_not_propagated(self):
+        class Meta(type):
+            def __new__(mcs, name, bases, namespace):
+                namespace.pop('__classcell__', None)
+                return super().__new__(mcs, name, bases, namespace)
+
+        with self.assertRaises(RuntimeError):
+            class X(metaclass=Meta):
+                def method(this):
+                    return __class__
+
+        class Y(metaclass=Meta):
+            pass
+        self.assertIsInstance(Y, Meta)
+
+    def test_classcell_set_to_other_class(self):
+        class Meta(type):
+            def __new__(mcs, name, bases, namespace):
+                super().__new__(mcs, name, bases, namespace)
+                return type.__new__(mcs, name, bases, {})
+
+        with self.assertRaises(TypeError):
+            class X(metaclass=Meta):
+                def method(this):
+                    return __class__
+
+    def test_classcell_ignored_for_non_type_result(self):
+        class X(metaclass=lambda name, bases, namespace: 42):
+            def method(this):
+                return __class__
+        self.assertEqual(X, 42)
 
     def test_inClassFunction(self):
 
