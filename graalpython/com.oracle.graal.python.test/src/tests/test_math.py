@@ -1778,3 +1778,11 @@ if (sys.version_info.major >= 3 and sys.version_info.minor >= 5):
             self.assertIsClose(MyFloat(), MyFloat(), rel_tol=MyFloat())
 
             self.assertIsNotClose(MyFloat(), 10)
+
+
+class GcdLcmSingleArgumentTests(unittest.TestCase):
+    def test_gcd_index_only_argument(self):
+        self.assertEqual(math.gcd(MyIndexable(-6)), 6)
+
+    def test_lcm_index_only_argument(self):
+        self.assertEqual(math.lcm(MyIndexable(-6)), 6)
