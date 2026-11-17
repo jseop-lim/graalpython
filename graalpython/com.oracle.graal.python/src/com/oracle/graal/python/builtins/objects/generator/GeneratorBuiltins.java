@@ -26,10 +26,6 @@
 package com.oracle.graal.python.builtins.objects.generator;
 
 import static com.oracle.graal.python.builtins.PythonBuiltinClassType.AttributeError;
-import static com.oracle.graal.python.nodes.SpecialAttributeNames.J___NAME__;
-import static com.oracle.graal.python.nodes.SpecialAttributeNames.J___QUALNAME__;
-import static com.oracle.graal.python.nodes.SpecialAttributeNames.T___NAME__;
-import static com.oracle.graal.python.nodes.SpecialAttributeNames.T___QUALNAME__;
 import static com.oracle.graal.python.nodes.SpecialMethodNames.J___CLASS_GETITEM__;
 import static com.oracle.graal.python.runtime.exception.PythonErrorType.ValueError;
 
@@ -46,7 +42,6 @@ import com.oracle.graal.python.builtins.objects.PNone;
 import com.oracle.graal.python.builtins.objects.PythonAbstractObject;
 import com.oracle.graal.python.builtins.objects.frame.PFrame;
 import com.oracle.graal.python.builtins.objects.function.PArguments;
-import com.oracle.graal.python.builtins.objects.str.StringNodes;
 import com.oracle.graal.python.builtins.objects.str.StringUtils.SimpleTruffleStringFormatNode;
 import com.oracle.graal.python.builtins.objects.type.TpSlots;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotIterNext.TpIterNextBuiltin;
@@ -79,50 +74,6 @@ public final class GeneratorBuiltins extends PythonBuiltins {
     @Override
     protected List<? extends NodeFactory<? extends PythonBuiltinBaseNode>> getNodeFactories() {
         return GeneratorBuiltinsFactory.getFactories();
-    }
-
-    @Builtin(name = J___NAME__, minNumOfPositionalArgs = 1, maxNumOfPositionalArgs = 2, isGetter = true, isSetter = true)
-    @GenerateNodeFactory
-    abstract static class NameNode extends PythonBinaryBuiltinNode {
-        @Specialization(guards = "isNoValue(noValue)")
-        static Object getName(PGenerator self, @SuppressWarnings("unused") PNone noValue) {
-            return self.getName();
-        }
-
-        @Specialization
-        static Object setName(PGenerator self, TruffleString value) {
-            self.setName(value);
-            return PNone.NONE;
-        }
-
-        @Specialization(guards = "!isNoValue(value)")
-        static Object setName(PGenerator self, Object value,
-                        @Bind Node inliningTarget,
-                        @Cached StringNodes.CastToTruffleStringChecked2Node cast) {
-            return setName(self, cast.cast(inliningTarget, value, ErrorMessages.MUST_BE_SET_TO_S_OBJ, T___NAME__, "string"));
-        }
-    }
-
-    @Builtin(name = J___QUALNAME__, minNumOfPositionalArgs = 1, maxNumOfPositionalArgs = 2, isGetter = true, isSetter = true)
-    @GenerateNodeFactory
-    abstract static class QualnameNode extends PythonBinaryBuiltinNode {
-        @Specialization(guards = "isNoValue(noValue)")
-        static Object getQualname(PGenerator self, @SuppressWarnings("unused") PNone noValue) {
-            return self.getQualname();
-        }
-
-        @Specialization
-        static Object setQualname(PGenerator self, TruffleString value) {
-            self.setQualname(value);
-            return PNone.NONE;
-        }
-
-        @Specialization(guards = "!isNoValue(value)")
-        static Object setQualname(PGenerator self, Object value,
-                        @Bind Node inliningTarget,
-                        @Cached StringNodes.CastToTruffleStringChecked2Node cast) {
-            return setQualname(self, cast.cast(inliningTarget, value, ErrorMessages.MUST_BE_SET_TO_S_OBJ, T___QUALNAME__, "string"));
-        }
     }
 
     @Slot(value = SlotKind.tp_iter, isComplex = true)

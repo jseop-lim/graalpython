@@ -52,7 +52,9 @@ import com.oracle.graal.python.builtins.CoreFunctions;
 import com.oracle.graal.python.builtins.PythonBuiltinClassType;
 import com.oracle.graal.python.builtins.PythonBuiltins;
 import com.oracle.graal.python.builtins.objects.PNone;
+import com.oracle.graal.python.builtins.objects.PythonAbstractObject;
 import com.oracle.graal.python.builtins.objects.generator.GeneratorBuiltins;
+import com.oracle.graal.python.builtins.objects.str.StringUtils.SimpleTruffleStringFormatNode;
 import com.oracle.graal.python.builtins.objects.type.TpSlots;
 import com.oracle.graal.python.nodes.call.special.CallUnaryMethodNode;
 import com.oracle.graal.python.nodes.function.PythonBuiltinBaseNode;
@@ -68,6 +70,7 @@ import com.oracle.truffle.api.dsl.NodeFactory;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.api.strings.TruffleString;
 
 @CoreFunctions(extendClasses = PythonBuiltinClassType.PAsyncGenerator)
 public final class AsyncGeneratorBuiltins extends PythonBuiltins {
@@ -193,6 +196,16 @@ public final class AsyncGeneratorBuiltins extends PythonBuiltins {
                         @Bind PythonLanguage language) {
             callHooks(frame, self, context.getThreadState(context.getLanguage(inliningTarget)), callFirstIter);
             return PFactory.createAsyncGeneratorAThrow(language, self, null, PNone.NO_VALUE, PNone.NO_VALUE);
+        }
+    }
+
+    @Slot(value = SlotKind.tp_repr, isComplex = true)
+    @GenerateNodeFactory
+    abstract static class ReprNode extends PythonUnaryBuiltinNode {
+        @Specialization
+        static TruffleString repr(PAsyncGen self,
+                        @Cached SimpleTruffleStringFormatNode simpleTruffleStringFormatNode) {
+            return simpleTruffleStringFormatNode.format("<async_generator object %s at 0x%d>", self.getQualname(), PythonAbstractObject.objectHashCode(self));
         }
     }
 

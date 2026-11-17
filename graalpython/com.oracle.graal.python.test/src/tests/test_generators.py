@@ -796,3 +796,43 @@ if sys.implementation.name != 'graalpy':
             g.throw(AttributeError())
         except NameError as e:
             assert e == original_ex
+
+
+def test_coroutine_name():
+    async def coro():
+        pass
+
+    c = coro()
+    assert c.__name__ == 'coro'
+    assert c.__qualname__ == 'test_coroutine_name.<locals>.coro'
+    c.__name__ = 'renamed'
+    c.__qualname__ = 'a.renamed'
+    assert c.__name__ == 'renamed'
+    assert c.__qualname__ == 'a.renamed'
+    assert repr(c).startswith('<coroutine object a.renamed at 0x')
+    c.close()
+
+
+def test_async_generator_name():
+    async def agen():
+        yield 1
+
+    g = agen()
+    assert g.__name__ == 'agen'
+    assert g.__qualname__ == 'test_async_generator_name.<locals>.agen'
+    assert repr(g).startswith('<async_generator object test_async_generator_name.<locals>.agen at 0x')
+    g.__name__ = 'renamed'
+    g.__qualname__ = 'a.renamed'
+    assert g.__name__ == 'renamed'
+    assert g.__qualname__ == 'a.renamed'
+
+
+def test_generator_name():
+    def gen():
+        yield 1
+
+    g = gen()
+    assert g.__name__ == 'gen'
+    assert g.__qualname__ == 'test_generator_name.<locals>.gen'
+    g.__name__ = 'renamed'
+    assert g.__name__ == 'renamed'

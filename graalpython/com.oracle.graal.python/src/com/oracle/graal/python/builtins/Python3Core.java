@@ -292,6 +292,7 @@ import com.oracle.graal.python.builtins.objects.function.WrapperDescriptorBuilti
 import com.oracle.graal.python.builtins.objects.generator.CommonGeneratorBuiltins;
 import com.oracle.graal.python.builtins.objects.generator.CoroutineBuiltins;
 import com.oracle.graal.python.builtins.objects.generator.GeneratorBuiltins;
+import com.oracle.graal.python.builtins.objects.generator.GeneratorNameBuiltins;
 import com.oracle.graal.python.builtins.objects.getsetdescriptor.DescriptorBuiltins;
 import com.oracle.graal.python.builtins.objects.getsetdescriptor.GetSetDescriptorTypeBuiltins;
 import com.oracle.graal.python.builtins.objects.getsetdescriptor.MemberDescriptorBuiltins;
@@ -546,6 +547,7 @@ public abstract class Python3Core {
                         new CoroutineWrapperBuiltins(),
                         new ANextAwaitableBuiltins(),
                         new CommonGeneratorBuiltins(),
+                        new GeneratorNameBuiltins(),
                         new AbstractFunctionBuiltins(),
                         new FunctionBuiltins(),
                         new BuiltinFunctionBuiltins(),
