@@ -642,6 +642,16 @@ class ExceptionTests(unittest.TestCase):
             errMsg = str(e)
         assert len(errMsg) > 0
 
+    def test_unicode_decode_error_object_must_be_bytes_like(self):
+        with self.assertRaises(TypeError):
+            UnicodeDecodeError('ascii', 'bytes', 0, 1, 'ouch')
+        class StrSubclass(str):
+            pass
+        with self.assertRaises(TypeError):
+            UnicodeDecodeError('ascii', StrSubclass('bytes'), 0, 1, 'ouch')
+        self.assertEqual(UnicodeDecodeError('ascii', b'bytes', 0, 1, 'ouch').object, b'bytes')
+        self.assertEqual(UnicodeDecodeError('ascii', bytearray(b'bytes'), 0, 1, 'ouch').object, b'bytes')
+
     def test_exception_scope(self):
         g = {}
         exec("try:1\nexcept Exception as e: pass", g)

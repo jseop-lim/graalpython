@@ -286,6 +286,22 @@ class TestPyUnicode(CPyExtTestCase):
         cmpfunc=unhandled_error_compare
     )
 
+    test_PyUnicode_FromStringAndSize_invalid_utf8 = CPyExtFunction(
+        lambda args: args[0].decode("utf-8"),
+        lambda: (
+            (b"\xff", 1),
+        ),
+        code="""PyObject* wrap_PyUnicode_FromStringAndSize_invalid_utf8(const char* v, Py_ssize_t ignored, Py_ssize_t n) {
+            return PyUnicode_FromStringAndSize(v, n);
+        }
+        """,
+        callfunction="wrap_PyUnicode_FromStringAndSize_invalid_utf8",
+        resultspec="O",
+        argspec='y#n',
+        arguments=["const char* v", "Py_ssize_t ignored", "Py_ssize_t n"],
+        cmpfunc=unhandled_error_compare
+    )
+
     test_PyUnicode_FromFormat0 = CPyExtFunction(
         lambda args: args[0].replace('%%', '%'),
         lambda: (

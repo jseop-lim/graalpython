@@ -1002,7 +1002,8 @@ public final class PythonCextUnicodeBuiltins {
                 if (isValidNode.execute(ts, srcEncoding)) {
                     return PFactory.createString(PythonLanguage.get(inliningTarget), switchEncodingNode.execute(ts, TS_ENCODING));
                 } else {
-                    throw raiseNode.raiseExceptionObject(inliningTarget, makeDecodingExceptionNode.execute(null, inliningTarget, null, encodingFromKind(kind), ts, 0, iByteLength,
+                    PBytes bytes = PFactory.createBytes(PythonLanguage.get(inliningTarget), getByteArray(ptr, byteLength));
+                    throw raiseNode.raiseExceptionObject(inliningTarget, makeDecodingExceptionNode.execute(null, inliningTarget, null, encodingFromKind(kind), bytes, 0, iByteLength,
                                     ErrorMessages.ILLEGAL_MULTIBYTE_SEQUENCE));
                 }
             } catch (OverflowException e) {

@@ -64,7 +64,6 @@ import com.oracle.graal.python.nodes.util.CastToJavaIntExactNode;
 import com.oracle.graal.python.nodes.util.CastToJavaLongExactNode;
 import com.oracle.graal.python.nodes.util.CastToTruffleStringNode;
 import com.oracle.graal.python.runtime.object.PFactory;
-import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Bind;
 import com.oracle.truffle.api.dsl.Cached;
 import com.oracle.truffle.api.dsl.Cached.Shared;
@@ -124,21 +123,11 @@ public final class UnicodeErrorBuiltins extends PythonBuiltins {
         abstract PBytes execute(VirtualFrame frame, Node inliningTarget, Object val);
 
         @Specialization
-        @TruffleBoundary
-        static PBytes doString(TruffleString value,
-                        @Bind PythonLanguage language) {
-            // TODO GR-37601: cbasca cPython works directly with bytes while we have Java strings
-            // which are encoded, here we decode using the system encoding but this might not be the
-            // correct / ideal case
-            return PFactory.createBytes(language, value.toJavaStringUncached().getBytes());
-        }
-
-        @Specialization
         static PBytes doBytes(PBytes value) {
             return value;
         }
 
-        @Specialization(guards = {"!isPBytes(value)", "!isString(value)"})
+        @Specialization(guards = "!isPBytes(value)")
         static PBytes doOther(VirtualFrame frame, Object value,
                         @Cached PyObjectGetBuffer getBuffer,
                         @CachedLibrary(limit = "getCallSiteInlineCacheMaxDepth()") PythonBufferAccessLibrary bufferLib,
