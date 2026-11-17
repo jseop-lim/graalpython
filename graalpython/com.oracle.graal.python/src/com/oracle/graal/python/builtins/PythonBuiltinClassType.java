@@ -135,6 +135,7 @@ import com.oracle.graal.python.builtins.modules.pickle.UnpicklerMemoProxyBuiltin
 import com.oracle.graal.python.builtins.modules.pyexpat.XMLParserBuiltins;
 import com.oracle.graal.python.builtins.modules.re.MatchBuiltins;
 import com.oracle.graal.python.builtins.modules.re.PatternBuiltins;
+import com.oracle.graal.python.builtins.modules.weakref.CallableProxyTypeBuiltins;
 import com.oracle.graal.python.builtins.modules.weakref.ProxyTypeBuiltins;
 import com.oracle.graal.python.builtins.modules.zlib.ZlibDecompressorBuiltins;
 import com.oracle.graal.python.builtins.objects.NoneBuiltins;
@@ -584,7 +585,10 @@ public enum PythonBuiltinClassType implements TruffleObject {
                     When step is given, it specifies the increment (or decrement).""")),
     PReferenceType("ReferenceType", PythonObject, newBuilder().publishInModule("_weakref").basetype().haveGC().slots(ReferenceTypeBuiltins.SLOTS)),
     PProxyType("ProxyType", PythonObject, newBuilder().haveGC().moduleName("weakref").publishInModule("_weakref").slots(ProxyTypeBuiltins.SLOTS)),
-    PCallableProxyType("CallableProxyType", PythonObject, newBuilder().haveGC().moduleName("weakref").publishInModule("_weakref")),
+    PCallableProxyType(
+                    "CallableProxyType",
+                    PythonObject,
+                    newBuilder().haveGC().moduleName("weakref").publishInModule("_weakref").disallowInstantiation().slots(ProxyTypeBuiltins.SLOTS, CallableProxyTypeBuiltins.SLOTS)),
     PSentinelIterator("callable_iterator", PythonObject, newBuilder().disallowInstantiation().slots(SentinelIteratorBuiltins.SLOTS)),
     PReverseIterator("reversed", PythonObject, newBuilder().publishInModule(J_BUILTINS).basetype().haveGC().slots(ReversedBuiltins.SLOTS).doc("""
                     Return a reverse iterator over the values of the given sequence.""")),

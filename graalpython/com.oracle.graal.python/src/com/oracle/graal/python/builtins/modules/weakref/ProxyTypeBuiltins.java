@@ -60,7 +60,6 @@ import com.oracle.graal.python.builtins.CoreFunctions;
 import com.oracle.graal.python.builtins.PythonBuiltinClassType;
 import com.oracle.graal.python.builtins.PythonBuiltins;
 import com.oracle.graal.python.builtins.objects.PNone;
-import com.oracle.graal.python.builtins.objects.function.PKeyword;
 import com.oracle.graal.python.builtins.objects.object.ObjectNodes;
 import com.oracle.graal.python.builtins.objects.object.PythonObject;
 import com.oracle.graal.python.builtins.objects.referencetype.PReferenceType;
@@ -76,6 +75,7 @@ import com.oracle.graal.python.builtins.objects.type.slots.TpSlotMpAssSubscript;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotRichCompare;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotSetAttr;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotSqContains;
+import com.oracle.graal.python.lib.PyCallableCheckNode;
 import com.oracle.graal.python.lib.PyIterCheckNode;
 import com.oracle.graal.python.lib.PyIterNextNode;
 import com.oracle.graal.python.lib.PyNumberAbsoluteNode;
@@ -127,7 +127,6 @@ import com.oracle.graal.python.nodes.function.PythonBuiltinBaseNode;
 import com.oracle.graal.python.nodes.function.PythonBuiltinNode;
 import com.oracle.graal.python.nodes.function.builtins.PythonTernaryBuiltinNode;
 import com.oracle.graal.python.nodes.function.builtins.PythonUnaryBuiltinNode;
-import com.oracle.graal.python.nodes.function.builtins.PythonVarargsBuiltinNode;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Bind;
 import com.oracle.truffle.api.dsl.Cached;
@@ -143,7 +142,7 @@ import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.object.Shape;
 import com.oracle.truffle.api.strings.TruffleString;
 
-@CoreFunctions(extendClasses = PythonBuiltinClassType.PProxyType)
+@CoreFunctions(extendClasses = {PythonBuiltinClassType.PProxyType, PythonBuiltinClassType.PCallableProxyType})
 public final class ProxyTypeBuiltins extends PythonBuiltins {
 
     public static final TpSlots SLOTS = ProxyTypeBuiltinsSlotsGen.SLOTS;
@@ -175,6 +174,7 @@ public final class ProxyTypeBuiltins extends PythonBuiltins {
         @Specialization
         static PProxyType newNode(VirtualFrame frame, Node inliningTarget, Object object, Object callbackObject,
                         @Bind PythonLanguage language,
+                        @Cached PyCallableCheckNode callableCheck,
                         @Cached ReferenceTypeBuiltins.ReferenceTypeNode newReferenceNode) {
             final Object callback;
             if (callbackObject == PNone.NO_VALUE) {
@@ -186,7 +186,7 @@ public final class ProxyTypeBuiltins extends PythonBuiltins {
             Object referenceClass = PythonBuiltinClassType.PReferenceType;
             PReferenceType weakReference = newReferenceNode.execute(referenceClass, object, callback);
 
-            PythonBuiltinClassType cls = PythonBuiltinClassType.PProxyType;
+            PythonBuiltinClassType cls = callableCheck.execute(inliningTarget, object) ? PythonBuiltinClassType.PCallableProxyType : PythonBuiltinClassType.PProxyType;
             Shape shape = cls.getInstanceShape(language);
             return new PProxyType(cls, shape, weakReference);
         }
@@ -325,20 +325,6 @@ public final class ProxyTypeBuiltins extends PythonBuiltins {
                         @Bind Node inliningTarget,
                         @Cached PyObjectIsTrueNode isTrueNode) {
             return isTrueNode.execute(frame, unwrap(self, inliningTarget));
-        }
-    }
-
-    @Slot(value = Slot.SlotKind.tp_call, isComplex = true)
-    @SlotSignature(minNumOfPositionalArgs = 1, takesVarArgs = true, takesVarKeywordArgs = true)
-    @GenerateNodeFactory
-    public abstract static class CallNode extends PythonVarargsBuiltinNode {
-
-        @Specialization
-        static Object call(VirtualFrame frame, PProxyType self, Object[] arguments, PKeyword[] keywords,
-                        @Bind Node inliningTarget,
-                        @Cached com.oracle.graal.python.nodes.call.CallNode callNode) {
-            Object object = unwrap(self, inliningTarget);
-            return callNode.execute(frame, object, arguments, keywords);
         }
     }
 
@@ -886,7 +872,7 @@ public final class ProxyTypeBuiltins extends PythonBuiltins {
         }
     }
 
-    private static Object unwrap(Object object, Node node) {
+    static Object unwrap(Object object, Node node) {
         if (!(object instanceof PProxyType proxy)) {
             return object;
         }

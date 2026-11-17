@@ -322,3 +322,33 @@ def test_proxy_call():
     proxy = weakref.proxy(a)
     assert callable(proxy) is True
     assert proxy() == 42
+
+
+def test_proxy_type_depends_on_callable():
+    class NotCallable:
+        pass
+
+    class Callable:
+        def __call__(self):
+            return 42
+
+    a = NotCallable()
+    c = Callable()
+    assert type(weakref.proxy(a)) is weakref.ProxyType
+    assert type(weakref.proxy(c)) is weakref.CallableProxyType
+    assert type(weakref.proxy(NotCallable)) is weakref.CallableProxyType
+    assert callable(weakref.proxy(a)) is False
+    assert callable(weakref.proxy(c)) is True
+    assert weakref.proxy(c)() == 42
+    raised = False
+    try:
+        weakref.proxy(a)()
+    except TypeError:
+        raised = True
+    assert raised
+    raised = False
+    try:
+        weakref.CallableProxyType(c)
+    except TypeError:
+        raised = True
+    assert raised
