@@ -1089,5 +1089,15 @@ def test_list_create():
     test_list_ctor((True, False, True), (True, o, True))
 
 
+
+class ListInitTests(unittest.TestCase):
+    def test_non_iterable_with_len(self):
+        class LenOnly:
+            def __len__(self):
+                raise KeyError
+
+        self.assertRaises(TypeError, list, LenOnly())
+
+
 if __name__ == '__main__':
     unittest.main()

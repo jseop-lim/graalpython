@@ -279,8 +279,8 @@ public final class ListBuiltins extends PythonBuiltins {
             if (selfInitProfile.profile(inliningTarget, list == iterable)) {
                 return PNone.NONE;
             }
-            int len = lenNode.execute(frame, inliningTarget, iterable);
             Object iterObj = getIter.execute(frame, inliningTarget, iterable);
+            int len = lenNode.execute(frame, inliningTarget, iterable);
             list.setSequenceStorage(storageNode.execute(frame, iterObj, len));
             return PNone.NONE;
         }
