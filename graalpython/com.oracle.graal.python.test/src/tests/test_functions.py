@@ -377,3 +377,46 @@ def test_args_kwargs_eval_order():
         pass
     f(a1(), a2(), k1=k1(), k2=k2(), k3=k3())
     assert l == [101, 102, 201, 202, 203]
+
+
+def test_function_type_takes_names_from_code():
+    def outer():
+        x = 1
+
+        def inner(a=0):
+            return x
+
+        return inner
+
+    function = type(outer)
+    inner = outer()
+
+    f = function(outer.__code__, {})
+    assert f.__name__ == 'outer'
+    assert f.__qualname__ == 'test_function_type_takes_names_from_code.<locals>.outer'
+    assert repr(f).startswith('<function test_function_type_takes_names_from_code.<locals>.outer at 0x')
+
+    f = function(inner.__code__, {}, None, None, inner.__closure__)
+    assert f.__name__ == 'inner'
+    assert f.__qualname__ == 'test_function_type_takes_names_from_code.<locals>.outer.<locals>.inner'
+
+    f = function(outer.__code__, {}, None, (1,))
+    assert f.__name__ == 'outer'
+    assert f.__qualname__ == 'test_function_type_takes_names_from_code.<locals>.outer'
+
+    f = function(outer.__code__, {}, 'renamed')
+    assert f.__name__ == 'renamed'
+    assert f.__qualname__ == 'test_function_type_takes_names_from_code.<locals>.outer'
+
+    f = function(inner.__code__, {}, 'renamed', (1,), inner.__closure__)
+    assert f.__name__ == 'renamed'
+    assert f.__qualname__ == 'test_function_type_takes_names_from_code.<locals>.outer.<locals>.inner'
+    assert f() == 1
+
+    class K:
+        def meth(self):
+            pass
+
+    f = function(K.meth.__code__, {}, 'renamed')
+    assert f.__name__ == 'renamed'
+    assert f.__qualname__ == 'test_function_type_takes_names_from_code.<locals>.K.meth'
