@@ -212,6 +212,7 @@ import com.oracle.graal.python.builtins.modules.re.MatchBuiltins;
 import com.oracle.graal.python.builtins.modules.re.PatternBuiltins;
 import com.oracle.graal.python.builtins.modules.re.SREModuleBuiltins;
 import com.oracle.graal.python.builtins.modules.re.SREScannerBuiltins;
+import com.oracle.graal.python.builtins.modules.weakref.CallableProxyTypeBuiltins;
 import com.oracle.graal.python.builtins.modules.weakref.ProxyTypeBuiltins;
 import com.oracle.graal.python.builtins.modules.zlib.ZLibModuleBuiltins;
 import com.oracle.graal.python.builtins.modules.zlib.ZlibCompressBuiltins;
@@ -588,6 +589,7 @@ public abstract class Python3Core {
                         new WeakRefModuleBuiltins(),
                         new ReferenceTypeBuiltins(),
                         new ProxyTypeBuiltins(),
+                        new CallableProxyTypeBuiltins(),
                         new TracemallocModuleBuiltins(),
                         new SysconfigModuleBuiltins(),
                         // contextvars
