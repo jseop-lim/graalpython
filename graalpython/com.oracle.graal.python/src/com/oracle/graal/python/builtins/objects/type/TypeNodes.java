@@ -132,6 +132,7 @@ import com.oracle.graal.python.builtins.objects.common.HashingStorageNodes.Hashi
 import com.oracle.graal.python.builtins.objects.common.HashingStorageNodes.HashingStorageIteratorKeyHash;
 import com.oracle.graal.python.builtins.objects.common.HashingStorageNodes.HashingStorageIteratorNext;
 import com.oracle.graal.python.builtins.objects.common.HashingStorageNodes.HashingStorageIteratorValue;
+import com.oracle.graal.python.builtins.objects.common.HashingStorageNodes.HashingStorageSetItem;
 import com.oracle.graal.python.builtins.objects.common.HashingStorageNodes.HashingStorageSetItemWithHash;
 import com.oracle.graal.python.builtins.objects.common.SequenceNodes.GetObjectArrayNode;
 import com.oracle.graal.python.builtins.objects.common.SequenceStorageNodes;
@@ -1834,6 +1835,7 @@ public abstract class TypeNodes {
                         @Cached InlinedConditionProfile hasBuiltinDictIter,
                         @Cached HashingStorageGetItem getItemGlobals,
                         @Cached HashingStorageGetItem getItemNamespace,
+                        @Cached HashingStorageSetItem setItemNamespace,
                         @Cached HashingStorageGetIterator getIterator,
                         @Cached HashingStorageIteratorNext itNext,
                         @Cached HashingStorageIteratorKey itKey,
@@ -1862,19 +1864,18 @@ public abstract class TypeNodes {
                 namespace = PFactory.createDict(language);
                 mergeNamespace.execute(frame, inliningTarget, namespace, namespaceOrig);
             }
-            PythonClass newType = typeMetaclass.execute(frame, name, bases, namespace, metaclass);
-
-            // set '__module__' attribute
-            Object moduleAttr = ensureReadAttrNode().execute(newType, SpecialAttributeNames.T___MODULE__);
-            if (moduleAttr == PNone.NO_VALUE) {
+            // '__module__' has to precede the '__dict__' and '__weakref__' descriptors that the
+            // allocation adds
+            if (getItemNamespace.execute(inliningTarget, namespace.getDictStorage(), SpecialAttributeNames.T___MODULE__) == null) {
                 PythonObject globals = getGlobals.execute(frame, inliningTarget);
                 if (globals != null) {
                     Object moduleName = getModuleNameFromGlobals(inliningTarget, globals, getItemGlobals);
                     if (moduleName != null) {
-                        newType.setAttribute(SpecialAttributeNames.T___MODULE__, moduleName);
+                        namespace.setDictStorage(setItemNamespace.execute(frame, inliningTarget, namespace.getDictStorage(), SpecialAttributeNames.T___MODULE__, moduleName));
                     }
                 }
             }
+            PythonClass newType = typeMetaclass.execute(frame, name, bases, namespace, metaclass);
 
             // delete __qualname__ from namespace
             delItemNamespace.execute(inliningTarget, namespace.getDictStorage(), T___QUALNAME__, namespace);

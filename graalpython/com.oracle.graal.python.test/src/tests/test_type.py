@@ -182,6 +182,11 @@ def test_unacceptable_base_type():
         assert False, "TypeError was not raised"
 
 
+def test_type_call_puts_module_before_dict_and_weakref():
+    assert list(vars(type('C', (), {'a': 1}))) == ['a', '__module__', '__dict__', '__weakref__', '__doc__']
+    assert list(vars(type('C', (), {'__module__': 'm', 'a': 1}))) == ['__module__', 'a', '__dict__', '__weakref__', '__doc__']
+
+
 def test_namespace_with_non_string_keys():
     class MyStr(str):
         pass
