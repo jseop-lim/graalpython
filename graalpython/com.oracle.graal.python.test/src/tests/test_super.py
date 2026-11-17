@@ -193,6 +193,22 @@ def test_generator_keeps_selected_super_method_across_yield():
         assert False
 
 
+def test_getattr_hashes_str_subclass_name():
+    class RaisingHash(str):
+        def __hash__(self):
+            raise KeyError
+
+    class StrHash(str):
+        def __hash__(self):
+            return 'x'
+
+    util.assert_raises(KeyError, getattr, super(int, 1), RaisingHash('real'), None)
+    util.assert_raises(KeyError, hasattr, super(int, 1), RaisingHash('missing'))
+    util.assert_raises(TypeError, getattr, super(int, 1), StrHash('real'), None)
+    assert getattr(super(bool, True), 'real') == 1
+    assert getattr(super(bool, True), 'missing', None) is None
+
+
 def test_super():
     class A:
         def m(self): return ["A"]

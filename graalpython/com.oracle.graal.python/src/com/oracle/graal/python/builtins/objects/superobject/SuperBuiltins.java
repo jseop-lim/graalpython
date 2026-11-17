@@ -76,7 +76,9 @@ import com.oracle.graal.python.builtins.objects.type.TypeNodes;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotDescrGet.CallSlotDescrGet;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotDescrGet.DescrGetBuiltinNode;
 import com.oracle.graal.python.builtins.objects.type.slots.TpSlotGetAttr.GetAttrBuiltinNode;
+import com.oracle.graal.python.lib.PyObjectHashNode;
 import com.oracle.graal.python.lib.PyObjectLookupAttr;
+import com.oracle.graal.python.lib.PyUnicodeCheckExactNode;
 import com.oracle.graal.python.nodes.ErrorMessages;
 import com.oracle.graal.python.nodes.PGuards;
 import com.oracle.graal.python.nodes.PNodeWithContext;
@@ -500,6 +502,8 @@ public final class SuperBuiltins extends PythonBuiltins {
                         @Cached GetObjectTypeNode getObjectType,
                         @Cached CastToTruffleStringChecked1Node castToTruffleStringNode,
                         @Cached LookupAttributeInMRONode.Super lookupNode,
+                        @Cached PyUnicodeCheckExactNode exactStringCheckNode,
+                        @Cached PyObjectHashNode hashNode,
                         @Cached InlinedConditionProfile hasDescrGetProfile,
                         @Cached InlinedConditionProfile getObjectIsStartObjectProfile,
                         @Cached IsForeignObjectNode isForeignObjectNode,
@@ -528,6 +532,10 @@ public final class SuperBuiltins extends PythonBuiltins {
             Object res = lookupNode.execute(type, startType, stringAttr);
             if (res == LookupAttributeInMRONode.Super.NO_MRO_SUFFIX) {
                 return genericGetAttr(frame, self, stringAttr);
+            }
+            if (!exactStringCheckNode.execute(inliningTarget, attr)) {
+                // the name of a str subclass is hashed by the lookup in the MRO dicts
+                hashNode.execute(frame, inliningTarget, attr);
             }
 
             if (res != PNone.NO_VALUE) {
