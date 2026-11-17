@@ -1874,6 +1874,7 @@ public final class BuiltinFunctions extends PythonBuiltins {
                         @Cached PRaiseNode raiseNode,
                         @Cached PyObjectGetIter getIter,
                         @Cached SumIteratorNode sumIteratorNode) {
+            Object iterator = getIter.execute(frame, inliningTarget, iterable);
             if (defaultStart.profile(inliningTarget, start == NO_VALUE)) {
                 start = 0;
             } else if (PGuards.isString(start)) {
@@ -1883,7 +1884,6 @@ public final class BuiltinFunctions extends PythonBuiltins {
             } else if (start instanceof PByteArray) {
                 throw raiseNode.raise(inliningTarget, TypeError, ErrorMessages.CANT_SUM_BYTEARRAY);
             }
-            Object iterator = getIter.execute(frame, inliningTarget, iterable);
             return sumIteratorNode.execute(frame, inliningTarget, iterator, start);
         }
 

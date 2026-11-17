@@ -1,4 +1,4 @@
-# Copyright (c) 2018, 2025, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # The Universal Permissive License (UPL), Version 1.0
@@ -112,3 +112,14 @@ def test_specializations():
     assert sum([2.1, 1], 1.0) == 4.1
     assert sum([], 1) == 1
     assert type(sum([], 1)) is int
+
+
+def test_iterable_error_before_start_check():
+    class RaisingIter:
+        def __iter__(self):
+            raise KeyError
+
+    assert_raises(KeyError, sum, RaisingIter(), 'x')
+    assert_raises(KeyError, sum, RaisingIter(), b'x')
+    assert_raises(KeyError, sum, RaisingIter(), bytearray(b'x'))
+    assert_raises(TypeError, sum, [], 'x')
