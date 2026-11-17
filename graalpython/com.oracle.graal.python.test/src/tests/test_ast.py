@@ -188,6 +188,17 @@ class AstTest(unittest.TestCase):
         exec(compile(tree, '<string>', 'exec'), vars)
         self.assertEqual("u'abc'", vars['f'].__annotations__['x'])
 
+    def test_iter_fields_requires_fields(self):
+        with self.assertRaises(AttributeError):
+            list(ast.iter_fields(list))
+        with self.assertRaises(AttributeError):
+            list(ast.iter_child_nodes(list))
+        with self.assertRaises(AttributeError):
+            list(ast.walk(list))
+        with self.assertRaises(AttributeError):
+            ast.unparse(list)
+        self.assertEqual(ast.unparse(ast.parse('a = 1')), 'a = 1')
+
     def test_parse_unicode(self):
         self.assertEqual(ast.parse("𝕦𝕟𝕚𝕔𝕠𝕕𝕖").body[0].value.id, 'unicode')
 
