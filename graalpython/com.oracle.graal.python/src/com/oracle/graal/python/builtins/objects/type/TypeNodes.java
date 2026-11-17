@@ -1312,9 +1312,24 @@ public abstract class TypeNodes {
             if (typeSlots != null && length(typeSlots) != 0) {
                 return true;
             }
-            Object typeNewMethod = LookupAttributeInMRONode.lookup(T___NEW__, GetMroStorageNode.executeUncached(type), ReadAttributeFromObjectNode.getUncached(), true);
-            Object baseNewMethod = LookupAttributeInMRONode.lookup(T___NEW__, GetMroStorageNode.executeUncached(base), ReadAttributeFromObjectNode.getUncached(), true);
-            return typeNewMethod != baseNewMethod;
+            return lookupNewInStaticBases(type) != lookupNewInStaticBases(base);
+        }
+
+        private static Object lookupNewInStaticBases(Object type) {
+            Object cls = type;
+            while (cls != null) {
+                if (cls instanceof PythonBuiltinClassType builtinType) {
+                    cls = PythonContext.get(null).lookupType(builtinType);
+                }
+                if (!(cls instanceof PythonClass pythonClass) || pythonClass.isStaticBase()) {
+                    Object newMethod = ReadAttributeFromObjectNode.getUncached().execute(cls, T___NEW__);
+                    if (newMethod != PNone.NO_VALUE) {
+                        return newMethod;
+                    }
+                }
+                cls = GetBaseClassNode.executeUncached(cls);
+            }
+            return PNone.NO_VALUE;
         }
 
         @TruffleBoundary

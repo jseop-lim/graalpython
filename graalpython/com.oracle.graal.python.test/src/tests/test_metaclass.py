@@ -147,3 +147,17 @@ def test_type_new_with_non_string_module_name():
     namespace = {"__name__": module_name}
     exec("class Meta(type): pass\ncreated = Meta('', (), {})", namespace)
     assert namespace["created"].__module__ is module_name
+
+
+def test_mro_without_object_keeps_object_layout():
+    class OnlySelf(type):
+        def mro(cls):
+            return (cls,)
+
+    class AppendB(type):
+        def mro(cls):
+            return (cls, B)
+
+    B = OnlySelf('B', (), {})
+    assert AppendB('A', (), {}).__mro__[1:] == (B,)
+    assert type('C', (B, int), {}).__bases__ == (B, int)
