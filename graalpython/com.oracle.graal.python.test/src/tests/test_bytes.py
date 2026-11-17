@@ -380,6 +380,27 @@ def test_subclass():
     assert "[[%s]]" % str(b3) == str(b4)
 
 
+def test_str_ignores_repr_of_subclass():
+
+    class MyBytes(bytes):
+
+        def __repr__(self):
+            return "repr"
+
+    class MyByteArray(bytearray):
+
+        def __repr__(self):
+            return "repr"
+
+    assert str(MyBytes(b'x')) == "b'x'"
+    assert format(MyBytes(b'x')) == "b'x'"
+    assert repr(MyBytes(b'x')) == "repr"
+    assert str(MyByteArray(b'x')) == "MyByteArray(b'x')"
+    assert repr(MyByteArray(b'x')) == "repr"
+    assert '__str__' in vars(bytes)
+    assert '__str__' in vars(bytearray)
+
+
 def test_eq():
     assert bytearray.__eq__(bytearray(b'1'), b'1')
     assert NotImplemented == bytearray.__eq__(bytearray(b'1'), '1')

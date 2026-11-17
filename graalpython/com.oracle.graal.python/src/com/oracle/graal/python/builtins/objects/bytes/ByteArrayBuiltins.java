@@ -412,6 +412,11 @@ public final class ByteArrayBuiltins extends PythonBuiltins {
         }
     }
 
+    @Slot(value = SlotKind.tp_str, isComplex = true)
+    @GenerateNodeFactory
+    abstract static class StrNode extends ReprNode {
+    }
+
     @Slot(value = SlotKind.sq_inplace_concat, isComplex = true)
     @GenerateNodeFactory
     public abstract static class IAddNode extends PythonBinaryBuiltinNode {

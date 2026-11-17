@@ -297,6 +297,11 @@ public class BytesBuiltins extends PythonBuiltins {
         }
     }
 
+    @Slot(value = SlotKind.tp_str, isComplex = true)
+    @GenerateNodeFactory
+    abstract static class StrNode extends ReprNode {
+    }
+
     // bytes.translate(table, delete=b'')
     @Builtin(name = "translate", minNumOfPositionalArgs = 2, parameterNames = {"self", "table", "delete"})
     @GenerateNodeFactory
