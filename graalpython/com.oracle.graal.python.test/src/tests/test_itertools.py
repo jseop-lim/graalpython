@@ -177,6 +177,29 @@ class CombinationsTests(unittest.TestCase):
         self.assertRaises(ValueError, islice, count(), -1)
         self.assertRaises(ValueError, islice, count(), 0, -1)
 
+    def test_tee_negative_n(self):
+        self.assertRaises(ValueError, tee, [], -1)
+        self.assertRaises(ValueError, tee, [], -2**32 - 1)
+        self.assertRaises(OverflowError, tee, [], -2**64)
+        self.assertRaisesRegex(ValueError, "n must be >= 0", tee, [], -1)
+
+    def test_tee_n(self):
+        self.assertEqual(tee([], 0), ())
+        self.assertEqual([list(it) for it in tee([1, 2])], [[1, 2], [1, 2]])
+        self.assertEqual([list(it) for it in tee([1, 2], 3)], [[1, 2], [1, 2], [1, 2]])
+
+    def test_batched_small_n(self):
+        self.assertRaises(ValueError, batched, [], 0)
+        self.assertRaises(ValueError, batched, [], -2**32 - 1)
+        self.assertRaises(OverflowError, batched, [], -2**64)
+
+    def test_batched_large_n(self):
+        self.assertIsInstance(batched([], 2**32 + 1), batched)
+        self.assertRaises(OverflowError, batched, [], 2**64)
+
+    def test_batched_n(self):
+        self.assertEqual(list(batched([1, 2, 3], 2)), [(1, 2), (3,)])
+
     @unittest.skipIf(sys.implementation.name == 'cpython' and sys.version_info[0:2] < (3, 10), "skipping for cPython versions < 3.10")
     def test_pairwise_drained(self):
         p = pairwise("abcd")

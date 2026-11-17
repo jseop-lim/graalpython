@@ -37,6 +37,7 @@ import com.oracle.graal.python.annotations.ArgumentClinic;
 import com.oracle.graal.python.annotations.Builtin;
 import com.oracle.graal.python.builtins.CoreFunctions;
 import com.oracle.graal.python.builtins.PythonBuiltins;
+import com.oracle.graal.python.builtins.objects.ints.PInt;
 import com.oracle.graal.python.builtins.objects.itertools.PTee;
 import com.oracle.graal.python.builtins.objects.itertools.TeeBuiltins;
 import com.oracle.graal.python.lib.PyObjectGetIter;
@@ -59,6 +60,7 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.LoopNode;
 import com.oracle.truffle.api.nodes.Node;
+import com.oracle.truffle.api.profiles.InlinedBranchProfile;
 import com.oracle.truffle.api.profiles.InlinedConditionProfile;
 
 @CoreFunctions(defineModule = "itertools")
@@ -120,7 +122,7 @@ public final class ItertoolsModuleBuiltins extends PythonBuiltins {
     }
 
     @Builtin(name = "tee", minNumOfPositionalArgs = 1, parameterNames = {"iterable", "n"})
-    @ArgumentClinic(name = "n", conversion = ArgumentClinic.ClinicConversion.Int, defaultValue = "2")
+    @ArgumentClinic(name = "n", conversion = ArgumentClinic.ClinicConversion.LongIndex, defaultValue = "2")
     @GenerateNodeFactory
     public abstract static class TeeNode extends PythonBinaryClinicBuiltinNode {
         @Override
@@ -130,24 +132,26 @@ public final class ItertoolsModuleBuiltins extends PythonBuiltins {
 
         @SuppressWarnings("unused")
         @Specialization(guards = "n < 0")
-        static Object negativeN(Object iterable, int n,
+        static Object negativeN(Object iterable, long n,
                         @Bind Node inliningTarget) {
-            throw PRaiseNode.raiseStatic(inliningTarget, ValueError, S_MUST_BE_S, "n", ">=0");
+            throw PRaiseNode.raiseStatic(inliningTarget, ValueError, S_MUST_BE_S, "n", ">= 0");
         }
 
         @SuppressWarnings("unused")
         @Specialization(guards = "n == 0")
-        static Object zeroN(Object iterable, int n,
+        static Object zeroN(Object iterable, long n,
                         @Bind PythonLanguage language) {
             return PFactory.createTuple(language, PythonUtils.EMPTY_OBJECT_ARRAY);
         }
 
-        @Specialization(guards = "n > 0")
-        static Object tee(VirtualFrame frame, Object iterable, int n,
+        @Specialization(guards = "longN > 0")
+        static Object tee(VirtualFrame frame, Object iterable, long longN,
                         @Bind Node inliningTarget,
                         @Cached PyObjectGetIter getIter,
                         @Cached InlinedConditionProfile isTeeInstanceProfile,
+                        @Cached InlinedBranchProfile overflowProfile,
                         @Bind PythonLanguage language) {
+            int n = PInt.long2int(inliningTarget, longN, overflowProfile);
             Object it = getIter.execute(frame, inliningTarget, iterable);
 
             // return tuple([it] + [it.__copy__() for i in range(1, n)])

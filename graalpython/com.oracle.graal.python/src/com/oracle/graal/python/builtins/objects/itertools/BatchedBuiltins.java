@@ -88,7 +88,7 @@ public final class BatchedBuiltins extends PythonBuiltins {
 
     @Slot(value = SlotKind.tp_new, isComplex = true)
     @SlotSignature(name = "batched", minNumOfPositionalArgs = 3, parameterNames = {"cls", "iterable", "n"}, keywordOnlyNames = {"strict"})
-    @ArgumentClinic(name = "n", conversion = ArgumentClinic.ClinicConversion.Int)
+    @ArgumentClinic(name = "n", conversion = ArgumentClinic.ClinicConversion.LongIndex)
     @ArgumentClinic(name = "strict", conversion = ArgumentClinic.ClinicConversion.Boolean, defaultValue = "false")
     @GenerateNodeFactory
     public abstract static class BatchedNode extends PythonQuaternaryClinicBuiltinNode {
@@ -98,7 +98,7 @@ public final class BatchedBuiltins extends PythonBuiltins {
         }
 
         @Specialization
-        static PBatched batched(VirtualFrame frame, Object cls, Object iterable, int n, boolean strict,
+        static PBatched batched(VirtualFrame frame, Object cls, Object iterable, long n, boolean strict,
                         @Bind Node inliningTarget,
                         @Cached PyObjectGetIter getIter,
                         @Cached TypeNodes.GetInstanceShape getInstanceShape,
@@ -113,7 +113,8 @@ public final class BatchedBuiltins extends PythonBuiltins {
             Object it = getIter.execute(frame, inliningTarget, iterable);
             /* create batchedobject structure */
             PBatched bo = PFactory.createBatched(cls, getInstanceShape.execute(cls));
-            bo.setBatchSize(n);
+            // a batch is a Java array, so it cannot grow beyond the int range anyway
+            bo.setBatchSize((int) Math.min(n, Integer.MAX_VALUE));
             bo.setIter(it);
             bo.setStrict(strict);
             return bo;
