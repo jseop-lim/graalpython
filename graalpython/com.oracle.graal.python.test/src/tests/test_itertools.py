@@ -182,3 +182,13 @@ class CombinationsTests(unittest.TestCase):
         p = pairwise("abcd")
         self.assertEqual(list(p), [('a', 'b'), ('b', 'c'), ('c', 'd')])
         self.assertEqual(list(p), [])
+
+
+class CombinationsArgumentOrderTests(unittest.TestCase):
+    def test_combinations_reads_iterable_before_checking_r(self):
+        self.assertRaises(TypeError, combinations, 1, -1)
+        self.assertRaises(ValueError, combinations, [1], -1)
+
+    def test_combinations_with_replacement_reads_iterable_before_checking_r(self):
+        self.assertRaises(TypeError, combinations_with_replacement, 1, -1)
+        self.assertRaises(ValueError, combinations_with_replacement, [1], -1)
