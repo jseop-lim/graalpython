@@ -88,5 +88,29 @@ class TestUnicodeCharacters(unittest.TestCase):
                              expected + writer.dialect.lineterminator)
 
 
+class TestDialectName(unittest.TestCase):
+    def test_register_dialect_hashes_name(self):
+        class RaisingHash(str):
+            def __hash__(self):
+                raise KeyError
 
+        class StrHash(str):
+            def __hash__(self):
+                return 'x'
 
+        self.assertRaises(KeyError, csv.register_dialect, RaisingHash('raising-hash'))
+        self.assertRaises(TypeError, csv.register_dialect, StrHash('str-hash'))
+        self.assertNotIn('raising-hash', csv.list_dialects())
+        self.assertNotIn('str-hash', csv.list_dialects())
+
+    def test_dialect_registered_under_name_with_own_hash(self):
+        class OwnHash(str):
+            def __hash__(self):
+                return 12345
+
+        csv.register_dialect(OwnHash('own-hash'), delimiter=';')
+        self.assertEqual(list(csv.reader(['a;b'], dialect=OwnHash('own-hash'))), [['a', 'b']])
+        self.assertEqual(csv.get_dialect(OwnHash('own-hash')).delimiter, ';')
+        self.assertRaises(csv.Error, csv.reader, ['a;b'], dialect='own-hash')
+        csv.unregister_dialect(OwnHash('own-hash'))
+        self.assertNotIn('own-hash', csv.list_dialects())

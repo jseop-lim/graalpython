@@ -71,6 +71,7 @@ import com.oracle.graal.python.lib.PyLongAsLongNode;
 import com.oracle.graal.python.lib.PyLongCheckExactNode;
 import com.oracle.graal.python.lib.PyObjectGetIter;
 import com.oracle.graal.python.lib.PyObjectLookupAttr;
+import com.oracle.graal.python.lib.PyUnicodeCheckNode;
 import com.oracle.graal.python.nodes.ErrorMessages;
 import com.oracle.graal.python.nodes.PRaiseNode;
 import com.oracle.graal.python.nodes.SpecialAttributeNames;
@@ -79,8 +80,6 @@ import com.oracle.graal.python.nodes.builtins.ListNodes;
 import com.oracle.graal.python.nodes.call.CallNode;
 import com.oracle.graal.python.nodes.function.PythonBuiltinBaseNode;
 import com.oracle.graal.python.nodes.function.PythonBuiltinNode;
-import com.oracle.graal.python.nodes.util.CannotCastException;
-import com.oracle.graal.python.nodes.util.CastToTruffleStringNode;
 import com.oracle.graal.python.runtime.object.PFactory;
 import com.oracle.truffle.api.dsl.Bind;
 import com.oracle.truffle.api.dsl.Cached;
@@ -135,15 +134,12 @@ public final class CSVModuleBuiltins extends PythonBuiltins {
         @Specialization
         static PNone register(VirtualFrame frame, PythonModule module, Object nameObj, Object dialectObj, PKeyword[] keywords,
                         @Bind Node inliningTarget,
-                        @Cached CastToTruffleStringNode nameNode,
+                        @Cached PyUnicodeCheckNode nameCheckNode,
                         @Cached ReadAttributeFromModuleNode readNode,
                         @Cached CallNode callNode,
                         @Cached PyDictSetItem setItem,
                         @Cached PRaiseNode raiseNode) {
-            TruffleString name;
-            try {
-                name = nameNode.execute(inliningTarget, nameObj);
-            } catch (CannotCastException e) {
+            if (!nameCheckNode.execute(inliningTarget, nameObj)) {
                 throw raiseNode.raise(inliningTarget, PythonBuiltinClassType.TypeError, ErrorMessages.MUST_BE_STRING, "dialect name");
             }
 
@@ -152,7 +148,7 @@ public final class CSVModuleBuiltins extends PythonBuiltins {
             // TODO GR-38165: unchecked cast to PDict
             PDict dialects = (PDict) readNode.execute(module, T__DIALECTS);
 
-            setItem.execute(frame, inliningTarget, dialects, name, result);
+            setItem.execute(frame, inliningTarget, dialects, nameObj, result);
 
             return PNone.NONE;
         }

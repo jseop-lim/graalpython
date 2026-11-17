@@ -230,15 +230,13 @@ public final class CSVDialectBuiltins extends PythonBuiltins {
                         Object lineterminatorObj, Object quotecharObj, Object quotingObj, Object skipinitialspaceObj, Object strictObj,
                         @Bind Node inliningTarget,
                         @Exclusive @Cached CSVModuleBuiltins.CSVGetDialectNode getDialect,
-                        @Cached CastToTruffleStringNode castToStringNode,
                         @Exclusive @Cached PyObjectIsTrueNode isTrueNode,
                         @Exclusive @Cached PyLongCheckExactNode pyLongCheckExactNode,
                         @Exclusive @Cached PyLongAsIntNode pyLongAsIntNode,
                         @Exclusive @Cached PRaiseNode raiseNode) {
 
-            TruffleString dialectNameStr = castToStringNode.execute(inliningTarget, dialectName);
             PythonModule module = PythonContext.get(inliningTarget).lookupBuiltinModule(T__CSV);
-            CSVDialect dialectObj = getDialect.execute(frame, module, dialectNameStr);
+            CSVDialect dialectObj = getDialect.execute(frame, module, dialectName);
 
             if (delimiterObj == PNone.NO_VALUE) {
                 delimiterObj = dialectObj.delimiter;
