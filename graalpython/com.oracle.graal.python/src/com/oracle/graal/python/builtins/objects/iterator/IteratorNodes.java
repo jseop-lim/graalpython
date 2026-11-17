@@ -377,8 +377,11 @@ public abstract class IteratorNodes {
         static Object[] doGeneric(VirtualFrame frame, Object iterable,
                         @Bind Node inliningTarget,
                         @Cached PyObjectGetIter getIter,
+                        @Cached GetLength lenNode,
                         @Cached PyIterNextNode nextNode) {
             Object it = getIter.execute(frame, inliningTarget, iterable);
+            // an invalid length or length hint is reported before the first item is requested
+            lenNode.execute(frame, inliningTarget, iterable);
             ArrayList<Object> result = new ArrayList<>();
             while (true) {
                 try {

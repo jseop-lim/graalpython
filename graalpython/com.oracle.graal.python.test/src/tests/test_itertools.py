@@ -7,6 +7,53 @@ import unittest, sys
 from itertools import *
 
 
+class PoolLengthHintTests(unittest.TestCase):
+    class NegativeHint:
+        def __getitem__(self, i):
+            raise KeyError(i)
+
+        def __length_hint__(self):
+            return -1
+
+    class BytesHint:
+        def __getitem__(self, i):
+            raise KeyError(i)
+
+        def __length_hint__(self):
+            return b';'
+
+    class FailingLen:
+        def __getitem__(self, i):
+            raise KeyError(i)
+
+        def __len__(self):
+            raise ZeroDivisionError
+
+    def test_combinations(self):
+        self.assertRaises(ValueError, combinations, self.NegativeHint(), 1)
+        self.assertRaises(TypeError, combinations, self.BytesHint(), 1)
+        self.assertRaises(ZeroDivisionError, combinations, self.FailingLen(), 1)
+
+    def test_combinations_with_replacement(self):
+        self.assertRaises(ValueError, combinations_with_replacement, self.NegativeHint(), 1)
+        self.assertRaises(TypeError, combinations_with_replacement, self.BytesHint(), 1)
+        self.assertRaises(ZeroDivisionError, combinations_with_replacement, self.FailingLen(), 1)
+
+    def test_permutations(self):
+        self.assertRaises(ValueError, permutations, self.NegativeHint())
+        self.assertRaises(TypeError, permutations, self.BytesHint())
+        self.assertRaises(ZeroDivisionError, permutations, self.FailingLen())
+
+    def test_product(self):
+        self.assertRaises(ValueError, product, self.NegativeHint())
+        self.assertRaises(TypeError, product, self.BytesHint())
+        self.assertRaises(ZeroDivisionError, product, self.FailingLen())
+
+    def test_generator_pool(self):
+        self.assertEqual(list(combinations((i for i in range(3)), 2)), [(0, 1), (0, 2), (1, 2)])
+        self.assertEqual(list(permutations(iter([1, 2]))), [(1, 2), (2, 1)])
+
+
 class CombinationsTests(unittest.TestCase):
 
     def test_combinations_with_replacement(self):
