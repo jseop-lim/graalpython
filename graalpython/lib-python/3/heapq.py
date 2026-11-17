@@ -129,13 +129,20 @@ From all times, sorting has always been a Great Art! :-)
 __all__ = ['heappush', 'heappop', 'heapify', 'heapreplace', 'merge',
            'nlargest', 'nsmallest', 'heappushpop']
 
+# GraalPy change: there is no C _heapq, whose functions accept only a list
+def _check_list(heap, name, arg=' 1'):
+    if not issubclass(type(heap), list):
+        raise TypeError(f"{name}() argument{arg} must be list, not {type(heap).__name__}")
+
 def heappush(heap, item):
     """Push item onto heap, maintaining the heap invariant."""
+    _check_list(heap, 'heappush')
     heap.append(item)
     _siftdown(heap, 0, len(heap)-1)
 
 def heappop(heap):
     """Pop the smallest item off the heap, maintaining the heap invariant."""
+    _check_list(heap, 'heappop', '')
     lastelt = heap.pop()    # raises appropriate IndexError if heap is empty
     if heap:
         returnitem = heap[0]
@@ -155,6 +162,7 @@ def heapreplace(heap, item):
         if item > heap[0]:
             item = heapreplace(heap, item)
     """
+    _check_list(heap, 'heapreplace')
     returnitem = heap[0]    # raises appropriate IndexError if heap is empty
     heap[0] = item
     _siftup(heap, 0)
@@ -162,6 +170,7 @@ def heapreplace(heap, item):
 
 def heappushpop(heap, item):
     """Fast version of a heappush followed by a heappop."""
+    _check_list(heap, 'heappushpop')
     if heap and heap[0] < item:
         item, heap[0] = heap[0], item
         _siftup(heap, 0)
@@ -169,6 +178,7 @@ def heappushpop(heap, item):
 
 def heapify(x):
     """Transform list into a heap, in-place, in O(len(x)) time."""
+    _check_list(x, 'heapify', '')
     n = len(x)
     # Transform bottom-up.  The largest index there's any point to looking at
     # is the largest with a child index in-range, so must have 2*i + 1 < n,
@@ -180,6 +190,7 @@ def heapify(x):
 
 def _heappop_max(heap):
     """Maxheap version of a heappop."""
+    _check_list(heap, '_heappop_max', '')
     lastelt = heap.pop()    # raises appropriate IndexError if heap is empty
     if heap:
         returnitem = heap[0]
@@ -190,6 +201,7 @@ def _heappop_max(heap):
 
 def _heapreplace_max(heap, item):
     """Maxheap version of a heappop followed by a heappush."""
+    _check_list(heap, '_heapreplace_max')
     returnitem = heap[0]    # raises appropriate IndexError if heap is empty
     heap[0] = item
     _siftup_max(heap, 0)
@@ -197,6 +209,7 @@ def _heapreplace_max(heap, item):
 
 def _heapify_max(x):
     """Transform list into a maxheap, in-place, in O(len(x)) time."""
+    _check_list(x, '_heapify_max', '')
     n = len(x)
     for i in reversed(range(n//2)):
         _siftup_max(x, i)
