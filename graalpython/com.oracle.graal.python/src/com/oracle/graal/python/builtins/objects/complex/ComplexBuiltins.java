@@ -331,7 +331,7 @@ public final class ComplexBuiltins extends PythonBuiltins {
             return createComplexNode.execute(inliningTarget, cls, real, imaginary);
         }
 
-        @Specialization
+        @Specialization(guards = "isBuiltinPInt(real)")
         static Object complexFromLongLong(Object cls, PInt real, PInt imaginary,
                         @Bind Node inliningTarget,
                         @Cached.Shared @Cached CreateComplexNode createComplexNode) {
@@ -506,7 +506,7 @@ public final class ComplexBuiltins extends PythonBuiltins {
             return createComplexNode.execute(inliningTarget, cls, one - two.getImag(), two.getReal());
         }
 
-        @Specialization
+        @Specialization(guards = "isBuiltinPInt(one)")
         static Object complexFromPIntComplex(Object cls, PInt one, PComplex two,
                         @Bind Node inliningTarget,
                         @Cached.Shared @Cached CreateComplexNode createComplexNode) {

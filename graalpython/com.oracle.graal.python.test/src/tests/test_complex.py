@@ -318,6 +318,29 @@ def test_create_checks_arguments_before_converting():
     assert_raises(TypeError, complex, RaisingReal(), {})
     assert_raises(KeyError, complex, RaisingReal(), RaisingImag())
 
+
+def test_create_from_int_subclass_uses_dunder_complex():
+    class IntWithComplex(int):
+        def __complex__(self):
+            return 5 + 0j
+
+    class IntWithBadComplex(int):
+        def __complex__(self):
+            return frozenset()
+
+    class IntWithRaisingComplex(int):
+        def __complex__(self):
+            raise KeyError
+
+    assert complex(IntWithComplex(2 ** 70), 2j) == 3 + 0j
+    assert_raises(TypeError, complex, IntWithBadComplex(2 ** 70), 2j)
+    assert_raises(KeyError, complex, IntWithRaisingComplex(2 ** 70), 2j)
+    assert complex(2 ** 70, 2j) == 2 ** 70 - 2 + 0j
+    assert complex(IntWithComplex(2 ** 70), 2 ** 70) == 5 + 2 ** 70 * 1j
+    assert_raises(TypeError, complex, IntWithBadComplex(2 ** 70), 2 ** 70)
+    assert_raises(KeyError, complex, IntWithRaisingComplex(2 ** 70), 2 ** 70)
+    assert complex(2 ** 70, 2 ** 70) == 2 ** 70 + 2 ** 70 * 1j
+
 class ComplexTest(unittest.TestCase):
 
     def assertAlmostEqual(self, a, b):
