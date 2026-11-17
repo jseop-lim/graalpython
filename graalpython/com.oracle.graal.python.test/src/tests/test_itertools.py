@@ -182,3 +182,15 @@ class CombinationsTests(unittest.TestCase):
         p = pairwise("abcd")
         self.assertEqual(list(p), [('a', 'b'), ('b', 'c'), ('c', 'd')])
         self.assertEqual(list(p), [])
+
+
+class CountIntSubclassStartTests(unittest.TestCase):
+    def test_bool_start_with_default_step(self):
+        c = count(True)
+        self.assertEqual(repr(c), 'count(1)')
+        self.assertIs(type(next(c)), int)
+
+    def test_bool_start_with_other_step(self):
+        c = count(True, 2)
+        self.assertEqual(repr(c), 'count(True, 2)')
+        self.assertIs(next(c), True)
